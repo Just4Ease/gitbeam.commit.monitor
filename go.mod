@@ -4,6 +4,7 @@ go 1.21.4
 
 require (
 	github.com/go-ozzo/ozzo-validation v3.6.0+incompatible // indirect
+	github.com/golang/mock v1.6.0 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/go-github/v63 v63.0.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
