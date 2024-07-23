@@ -56,5 +56,6 @@ func main() {
 	address := fmt.Sprintf("0.0.0.0:%s", secrets.Port)
 	logger.Printf("[*] %s listening on address: %s", config.ServiceName, address)
 
-	server.ExecGRPCServer(address, coreService, logger)
+	api := server.NewApiService(coreService, schedulerService, logger)
+	server.ExecGRPCServer(address, api)
 }

@@ -9,7 +9,6 @@ import (
 	"gitbeam.commit.monitor/models"
 	"gitbeam.commit.monitor/repository"
 	"github.com/sirupsen/logrus"
-	"time"
 )
 
 var (
@@ -45,6 +44,8 @@ func (s *Scheduler) StartMirroringRepoCommits(ctx context.Context, payload model
 		useLogger.WithError(err).Error("Failed to save cron task in cronStore.")
 		return ErrFailedToStartMonitoringRepoCommits
 	}
+
+	s.jobTracker.addJob(newJob(s.coreService, &payload))
 
 	eventStore := s.coreService.GetEventStore()
 
@@ -90,29 +91,6 @@ func (s *Scheduler) loadExistingConfig() {
 	}
 
 	for _, config := range list {
-		s.jobTracker.addJob(&Job{
-			Task: func() {
-				ctx := context.Background()
-				name := models.OwnerAndRepoName{
-					OwnerName: config.OwnerName,
-					RepoName:  config.RepoName,
-				}
-
-				filters := models.CommitFilters{
-					OwnerAndRepoName: name,
-				}
-
-				filters.ToDate, _ = models.ParseDate(time.Now().Format(time.DateOnly))
-				if lastCommit, _ := s.coreService.GetLastCommit(ctx, name); lastCommit != nil {
-					filters.FromDate, _ = models.ParseDate(lastCommit.Date)
-				} else {
-					filters.FromDate = nil
-					filters.ToDate = nil
-				}
-
-				_ = s.coreService.FetchAndSaveCommits(context.Background(), filters)
-			},
-			Config: config,
-		})
+		s.jobTracker.addJob(newJob(s.coreService, config))
 	}
 }

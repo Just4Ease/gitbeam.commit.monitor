@@ -80,9 +80,9 @@ func (s sqliteRepo) SaveMonitorConfigs(ctx context.Context, payload models.Monit
 			owner_name,
 			from_date,
 			to_date,
-			duration_in_hours,
+			duration_in_hours
 		)
-        VALUES (?, ?, ?, ?)`
+        VALUES (?, ?, ?, ?, ?)`
 
 	_, err := s.dataStore.ExecContext(ctx, insertSQL,
 		payload.RepoName,

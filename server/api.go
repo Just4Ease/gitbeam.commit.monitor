@@ -18,10 +18,11 @@ type apiService struct {
 
 func (a apiService) StartMonitoringRepositoryCommits(ctx context.Context, params *commits.MonitorRepositoryCommitsConfigParams) (*commits.Void, error) {
 	payload := models.MonitorRepositoryCommitConfig{
-		OwnerName: params.OwnerName,
-		RepoName:  params.RepoName,
-		FromDate:  "",
-		ToDate:    "",
+		OwnerName:       params.OwnerName,
+		RepoName:        params.RepoName,
+		DurationInHours: params.DurationInHours,
+		FromDate:        "",
+		ToDate:          "",
 	}
 
 	if params.FromDate != "" {
@@ -79,8 +80,17 @@ func (a apiService) ListCommits(ctx context.Context, params *commits.CommitFilte
 }
 
 func (a apiService) GetCommitByOwnerAndSHA(ctx context.Context, params *commits.CommitByOwnerAndShaParams) (*commits.Commit, error) {
-	//TODO implement me
-	panic("implement me")
+	output, err := a.service.GetCommitsBySha(ctx, models.OwnerAndRepoName{
+		OwnerName: params.OwnerName,
+		RepoName:  params.RepoName,
+	}, params.Sha)
+	if err != nil {
+		return nil, err
+	}
+
+	var c commits.Commit
+	_ = utils.UnPack(output, &c)
+	return &c, nil
 }
 
 func (a apiService) ListTopCommitAuthor(ctx context.Context, params *commits.CommitFilterParams) (*commits.ListTopCommitAuthorResponse, error) {
@@ -117,9 +127,13 @@ func (a apiService) HealthCheck(ctx context.Context, void *commits.Void) (*commi
 	return &commits.HealthCheckResponse{Code: 200}, nil
 }
 
-func NewApiService(core *core.GitBeamService, logger *logrus.Logger) commits.GitBeamCommitsServiceServer {
+func NewApiService(
+	service *core.GitBeamService,
+	schedulerService *scheduler.Scheduler,
+	logger *logrus.Logger) commits.GitBeamCommitsServiceServer {
 	return &apiService{
-		service: core,
-		logger:  logger,
+		service:          service,
+		schedulerService: schedulerService,
+		logger:           logger,
 	}
 }

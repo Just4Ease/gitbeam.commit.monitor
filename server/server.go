@@ -1,7 +1,6 @@
 package server
 
 import (
-	"gitbeam.commit.monitor/core"
 	commits "gitbeam.commit.monitor/pb"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
@@ -10,13 +9,12 @@ import (
 	"net"
 )
 
-func ExecGRPCServer(address string, core *core.GitBeamService, logger *logrus.Logger) {
+func ExecGRPCServer(address string, api commits.GitBeamCommitsServiceServer) {
 	defer func() {
 		if err := recover(); err != nil {
 			log.Fatalf("Recovered from err: %v", err)
 		}
 	}()
-	api := NewApiService(core, logger)
 
 	server := grpc.NewServer()
 	commits.RegisterGitBeamCommitsServiceServer(server, api)

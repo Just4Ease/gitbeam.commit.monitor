@@ -1,7 +1,9 @@
 package scheduler
 
 import (
+	"context"
 	"fmt"
+	"gitbeam.commit.monitor/core"
 	"gitbeam.commit.monitor/models"
 	"sync"
 	"time"
@@ -13,7 +15,34 @@ type Job struct {
 	Config *models.MonitorRepositoryCommitConfig
 }
 
-func (j *Job) ID() string {
+func newJob(coreService *core.GitBeamService, cfg *models.MonitorRepositoryCommitConfig) Job {
+	return Job{
+		Config: cfg,
+		Task: func() {
+			ctx := context.Background()
+			name := models.OwnerAndRepoName{
+				OwnerName: cfg.OwnerName,
+				RepoName:  cfg.RepoName,
+			}
+
+			filters := models.CommitFilters{
+				OwnerAndRepoName: name,
+			}
+
+			filters.ToDate, _ = models.ParseDate(time.Now().Format(time.DateOnly))
+			if lastCommit, _ := coreService.GetLastCommit(ctx, name); lastCommit != nil {
+				filters.FromDate, _ = models.ParseDate(lastCommit.Date)
+			} else {
+				filters.FromDate = nil
+				filters.ToDate = nil
+			}
+
+			_ = coreService.FetchAndSaveCommits(context.Background(), filters)
+		},
+	}
+}
+
+func (j Job) ID() string {
 	return j.Config.ID()
 }
 
@@ -24,7 +53,7 @@ type jobTracker struct {
 }
 
 // addJob adds a new job to the scheduler
-func (s *jobTracker) addJob(job *Job) {
+func (s *jobTracker) addJob(job Job) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -33,10 +62,10 @@ func (s *jobTracker) addJob(job *Job) {
 		return
 	}
 
-	s.jobs[job.ID()] = job
+	s.jobs[job.ID()] = &job
 	stopChan := make(chan bool)
 	s.stopChans[job.ID()] = stopChan
-	go s.startJob(job, stopChan)
+	go s.startJob(&job, stopChan)
 }
 
 // removeJob removes a job from the scheduler
@@ -61,7 +90,7 @@ func (s *jobTracker) updateJob(cfg models.MonitorRepositoryCommitConfig) {
 
 	if job, exists := s.jobs[id]; exists {
 		s.removeJob(id)
-		s.addJob(job)
+		s.addJob(*job)
 	}
 }
 
@@ -69,7 +98,7 @@ func (s *jobTracker) updateJob(cfg models.MonitorRepositoryCommitConfig) {
 func (s *jobTracker) startJob(job *Job, stopChan chan bool) {
 	ticker := time.NewTicker(60 * time.Minute * time.Duration(job.Config.DurationInHours))
 	defer ticker.Stop()
-
+	go job.Task() // Always start the job instantly. Then the following code below schedules it to be executed in the next interval.
 	for {
 		select {
 		case <-ticker.C:
