@@ -25,6 +25,9 @@ func (g GitBeamService) dependOnRateLimitingConstraints(ctx context.Context) (sh
 	}
 
 	if rateLimit.Core.Remaining == 0 {
+		g.logger.WithFields(logrus.Fields{
+			"rate_limit": rateLimit,
+		}).Info("Current Rate Limit Constraints")
 		sleepDuration := time.Until(rateLimit.Core.Reset.Time)
 		log.Printf("Rate limit exceeded, sleeping for %v", sleepDuration)
 		time.Sleep(sleepDuration)
@@ -169,7 +172,7 @@ run:
 			SHA:             gitCommit.GetSHA(),
 			Message:         c.GetMessage(),
 			Author:          gitCommit.GetCommitter().GetLogin(),
-			Date:            c.Committer.GetDate().Time.Format(time.RFC3339),
+			Date:            c.Committer.GetDate().Time,
 			URL:             gitCommit.GetHTMLURL(),
 			OwnerName:       filters.OwnerName,
 			RepoName:        filters.RepoName,

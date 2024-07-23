@@ -34,6 +34,7 @@ func deserializeParentCommitIds(data string) ([]string, error) {
 
 func scanCommitRows(rows *sql.Rows) (*models.Commit, error) {
 	var serializedParentCommitIDs string
+	var dateString string
 	var commit models.Commit
 	var err error
 	if err = rows.Scan(
@@ -44,8 +45,13 @@ func scanCommitRows(rows *sql.Rows) (*models.Commit, error) {
 		&commit.OwnerName,
 		&commit.URL,
 		&serializedParentCommitIDs,
-		&commit.Date,
+		&dateString,
 	); err != nil {
+		return nil, err
+	}
+
+	commit.Date, err = time.Parse(time.RFC3339, dateString)
+	if err != nil {
 		return nil, err
 	}
 
@@ -59,6 +65,7 @@ func scanCommitRows(rows *sql.Rows) (*models.Commit, error) {
 
 func scanCommitRow(row *sql.Row) (*models.Commit, error) {
 	var serializedParentCommitIDs string
+	var dateString string
 	var commit models.Commit
 	var err error
 	if err = row.Scan(
@@ -69,8 +76,13 @@ func scanCommitRow(row *sql.Row) (*models.Commit, error) {
 		&commit.OwnerName,
 		&commit.URL,
 		&serializedParentCommitIDs,
-		&commit.Date,
+		&dateString,
 	); err != nil {
+		return nil, err
+	}
+
+	commit.Date, err = time.Parse(time.RFC3339, dateString)
+	if err != nil {
 		return nil, err
 	}
 
@@ -79,6 +91,7 @@ func scanCommitRow(row *sql.Row) (*models.Commit, error) {
 		return nil, err
 	}
 
+	//time.Parse()
 	return &commit, nil
 }
 
@@ -177,7 +190,7 @@ func (s sqliteRepo) SaveCommit(ctx context.Context, commit *models.Commit) error
 		commit.OwnerName,
 		commit.URL,
 		string(serializedParentCommitIds),
-		commit.Date,
+		commit.Date.Format(time.RFC3339),
 	)
 
 	return err

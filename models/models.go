@@ -1,14 +1,16 @@
 package models
 
+import "time"
+
 type Commit struct {
-	Date            string   `json:"date"`
-	Message         string   `json:"message"`
-	Author          string   `json:"author"`
-	RepoName        string   `json:"repoName"`
-	OwnerName       string   `json:"ownerName"`
-	URL             string   `json:"url"`
-	SHA             string   `json:"sha"`
-	ParentCommitIDs []string `json:"parentCommitIDs"`
+	Date            time.Time `json:"date"`
+	Message         string    `json:"message"`
+	Author          string    `json:"author"`
+	RepoName        string    `json:"repoName"`
+	OwnerName       string    `json:"ownerName"`
+	URL             string    `json:"url"`
+	SHA             string    `json:"sha"`
+	ParentCommitIDs []string  `json:"parentCommitIDs"`
 }
 
 type CommitFilters struct {
