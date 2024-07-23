@@ -7,5 +7,6 @@ const (
 )
 
 const (
-	CronTaskCreated = "com.gitbeam.cron.task.created"
+	MonitorTaskCreated = "gitbeam.commit.monitor.task.created"
+	MonitorTaskDeleted = "gitbeam.commit.monitor.task.deleted"
 )

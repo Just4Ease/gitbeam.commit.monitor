@@ -16,8 +16,8 @@ type DataStore interface {
 }
 
 type CronServiceStore interface {
-	SaveCronTask(ctx context.Context, task models.CronTask) error
-	GetCronTask(ctx context.Context, owner models.OwnerAndRepoName) (*models.CronTask, error)
-	DeleteCronTask(ctx context.Context, owner models.OwnerAndRepoName) error
-	ListCronTask(ctx context.Context) ([]*models.CronTask, error)
+	SaveMonitorConfigs(ctx context.Context, task models.MonitorRepositoryCommitConfig) error
+	ListMonitorConfig(ctx context.Context) ([]*models.MonitorRepositoryCommitConfig, error)
+	GetMonitorConfig(ctx context.Context, owner models.OwnerAndRepoName) (*models.MonitorRepositoryCommitConfig, error)
+	DeleteMonitorConfig(ctx context.Context, owner models.OwnerAndRepoName) error
 }

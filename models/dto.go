@@ -5,9 +5,9 @@ import (
 )
 
 type Result struct {
-	Success bool   `json:"success"`
-	Message string `json:"message,omitempty"`
 	Data    any    `json:"data,omitempty"`
+	Message string `json:"message,omitempty"`
+	Success bool   `json:"success"`
 }
 
 type OwnerAndRepoName struct {
@@ -16,9 +16,9 @@ type OwnerAndRepoName struct {
 }
 
 type MirrorRepoCommitsRequest struct {
-	OwnerAndRepoName `json:",inline"`
 	FromDate         *Date `json:"fromDate,omitempty"`
 	ToDate           *Date `json:"toDate,omitempty"`
+	OwnerAndRepoName `json:",inline"`
 }
 
 func (s OwnerAndRepoName) Validate() error {

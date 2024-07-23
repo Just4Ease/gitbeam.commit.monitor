@@ -8,12 +8,30 @@ import (
 	"gitbeam.commit.monitor/repository"
 	"github.com/google/go-github/v63/github"
 	"github.com/sirupsen/logrus"
+	"log"
 	"net/http"
+	"time"
 )
 
 var (
 	ErrCommitNotFound = errors.New("commit not found")
 )
+
+func (g GitBeamService) dependOnRateLimitingConstraints(ctx context.Context) (shouldContinue bool, err error) {
+	// Check rate limit
+	rateLimit, _, err := g.githubClient.RateLimit.Get(ctx)
+	if err != nil {
+		return false, err
+	}
+
+	if rateLimit.Core.Remaining == 0 {
+		sleepDuration := time.Until(rateLimit.Core.Reset.Time)
+		log.Printf("Rate limit exceeded, sleeping for %v", sleepDuration)
+		time.Sleep(sleepDuration)
+	}
+
+	return true, nil
+}
 
 type GitBeamService struct {
 	githubClient *github.Client
@@ -126,15 +144,23 @@ func (g GitBeamService) FetchAndSaveCommits(ctx context.Context, filters models.
 	if filters.ToDate != nil {
 		ghOptions.Until = filters.ToDate.Time
 	}
-run:
-	gitCommits, response, err := g.githubClient.Repositories.ListCommits(ctx, filters.OwnerName, filters.OwnerName, &ghOptions)
 
+run:
+	ok, err := g.dependOnRateLimitingConstraints(ctx)
+	if err != nil {
+		useLogger.WithError(err).Errorln("failed to fetch commits from github")
+		return nil
+	}
+
+	if !ok {
+		return nil
+	}
+
+	gitCommits, response, err := g.githubClient.Repositories.ListCommits(ctx, filters.OwnerName, filters.OwnerName, &ghOptions)
 	if err != nil {
 		useLogger.WithError(err).Error("failed to list commits from github")
 		return err
 	}
-
-	useLogger.WithField("rate_limits", response.Rate).Infoln("Raw API response from GitHub")
 
 	for _, gitCommit := range gitCommits {
 		c := gitCommit.GetCommit()
@@ -143,7 +169,7 @@ run:
 			SHA:             gitCommit.GetSHA(),
 			Message:         c.GetMessage(),
 			Author:          gitCommit.GetCommitter().GetLogin(),
-			Date:            c.Committer.GetDate().Time,
+			Date:            c.Committer.GetDate().Time.Format(time.RFC3339),
 			URL:             gitCommit.GetHTMLURL(),
 			OwnerName:       filters.OwnerName,
 			RepoName:        filters.RepoName,
@@ -161,10 +187,8 @@ run:
 		}
 	}
 
-	// if the previous/above attempt to list commits from github had data, then let's check if a new page will have data,
-	// else we exit until FetchAndSaveCommits is called by a cron.
-	if len(gitCommits) > 0 && response.Rate.Remaining > 0 { // TODO: Apply rate limiting rules to respect github's rate limit flow.
-		pageNumber += 1
+	if response.NextPage != 0 {
+		ghOptions.Page = response.NextPage
 		goto run
 	}
 

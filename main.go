@@ -8,6 +8,7 @@ import (
 	"gitbeam.commit.monitor/events"
 	"gitbeam.commit.monitor/repository"
 	"gitbeam.commit.monitor/repository/sqlite"
+	"gitbeam.commit.monitor/scheduler"
 	"gitbeam.commit.monitor/server"
 	"github.com/sirupsen/logrus"
 	"os"
@@ -16,7 +17,7 @@ import (
 func main() {
 	var eventStore store.EventStore
 	var dataStore repository.DataStore
-	//var cronStore repository.CronServiceStore
+	var cronStore repository.CronServiceStore
 	var err error
 
 	logger := logrus.New()
@@ -45,14 +46,15 @@ func main() {
 
 	//Using SQLite as the mini persistent storage.
 	//( in a real world system, this would be any production level or vendor managed db )
-	//if cronStore, err = sqlite.NewSqliteCronStore("cron_store.db"); err != nil {
-	//	logger.WithError(err).Fatal("failed to initialize sqlite database repository for cron store.")
-	//}
+	if cronStore, err = sqlite.NewSqliteCronStore("cron_store.db"); err != nil {
+		logger.WithError(err).Fatal("failed to initialize sqlite database repository for cron store.")
+	}
 
-	//cronService := cron.NewCronService(cronStore, coreService, logger)
-	//go cronService.Start()
+	schedulerService := scheduler.NewScheduler(coreService, cronStore, logger)
+	go schedulerService.StartScheduler()
+
 	address := fmt.Sprintf("0.0.0.0:%s", secrets.Port)
 	logger.Printf("[*] %s listening on address: %s", config.ServiceName, address)
-	
+
 	server.ExecGRPCServer(address, coreService, logger)
 }

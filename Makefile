@@ -12,7 +12,7 @@ endif
 
 GO_SOURCES_OWN := $(filter-out vendor/%, $(GO_SOURCES))
 
-PROTO_SRC_DIR := ${PWD}/gitbeam-baselib/protos
+PROTO_SRC_DIR := ${PWD}/gitbeam.baselib/protos
 PROTO_DST_DIR := ${PWD}/pb/
 
 

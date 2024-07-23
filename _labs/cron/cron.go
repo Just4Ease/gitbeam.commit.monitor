@@ -81,7 +81,7 @@ func (s Service) StartMirroringRepoCommits(ctx context.Context, payload models.M
 		repo.Meta["toDate"] = payload.ToDate.String()
 	}
 
-	err = s.cronStore.SaveCronTask(ctx, models.CronTask{
+	err = s.cronStore.SaveMonitorConfigs(ctx, models.MonitorRepositoryCommitConfig{
 		RepoName:  repo.Name,
 		OwnerName: repo.Owner,
 		FromDate:  fromDate,
@@ -101,7 +101,7 @@ func (s Service) StartMirroringRepoCommits(ctx context.Context, payload models.M
 
 func (s Service) StopMirroringRepoCommits(ctx context.Context, name models.OwnerAndRepoName) error {
 	useLogger := s.logger.WithContext(ctx).WithField("methodName", "StopMirroringRepoCommits")
-	err := s.cronStore.DeleteCronTask(ctx, name)
+	err := s.cronStore.DeleteMonitorConfig(ctx, name)
 	if err != nil {
 		useLogger.WithError(err).Error("Failed to delete cron task from cronStore.")
 		return ErrFailedToStopMirroringRepoCommits
@@ -115,7 +115,7 @@ func (s Service) listCronTasksAndExecuteRepoCommitsMirroring() {
 	useLogger := s.logger.WithField("methodName", "listCronTasksAndExecuteRepoCommitsMirroring")
 	useLogger.Info("Started fetching and saving commits")
 	ctx := context.Background()
-	trackers, _ := s.cronStore.ListCronTask(ctx)
+	trackers, _ := s.cronStore.ListMonitorConfig(ctx)
 	wg := &sync.WaitGroup{}
 	for _, tracker := range trackers {
 		wg.Add(1)

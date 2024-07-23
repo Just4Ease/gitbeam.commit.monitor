@@ -14,18 +14,20 @@ CREATE TABLE IF NOT EXISTS cron_tasks (
 		owner_name TEXT,
 		from_date DATETIME,
 		to_date DATETIME,
+		duration_in_hours INTEGER,
 		UNIQUE (repo_name, owner_name)
 )
 `
 
-func scanCronTrackerRow(row *sql.Row) (*models.CronTask, error) {
-	var cronTracker models.CronTask
+func scanCronTrackerRow(row *sql.Row) (*models.MonitorRepositoryCommitConfig, error) {
+	var cronTracker models.MonitorRepositoryCommitConfig
 	var err error
 	if err = row.Scan(
 		&cronTracker.RepoName,
 		&cronTracker.OwnerName,
 		&cronTracker.FromDate,
 		&cronTracker.ToDate,
+		&cronTracker.DurationInHours,
 	); err != nil {
 		return nil, err
 	}
@@ -33,14 +35,15 @@ func scanCronTrackerRow(row *sql.Row) (*models.CronTask, error) {
 	return &cronTracker, nil
 }
 
-func scanCronTrackerRows(rows *sql.Rows) (*models.CronTask, error) {
-	var cronTracker models.CronTask
+func scanCronTrackerRows(rows *sql.Rows) (*models.MonitorRepositoryCommitConfig, error) {
+	var cronTracker models.MonitorRepositoryCommitConfig
 	var err error
 	if err = rows.Scan(
 		&cronTracker.RepoName,
 		&cronTracker.OwnerName,
 		&cronTracker.FromDate,
 		&cronTracker.ToDate,
+		&cronTracker.DurationInHours,
 	); err != nil {
 		return nil, err
 	}
@@ -48,7 +51,7 @@ func scanCronTrackerRows(rows *sql.Rows) (*models.CronTask, error) {
 	return &cronTracker, nil
 }
 
-func (s sqliteRepo) ListCronTask(ctx context.Context) ([]*models.CronTask, error) {
+func (s sqliteRepo) ListMonitorConfig(ctx context.Context) ([]*models.MonitorRepositoryCommitConfig, error) {
 	querySQL := `SELECT * FROM cron_tasks`
 
 	rows, err := s.dataStore.QueryContext(ctx, querySQL)
@@ -56,7 +59,7 @@ func (s sqliteRepo) ListCronTask(ctx context.Context) ([]*models.CronTask, error
 		return nil, err
 	}
 
-	var list []*models.CronTask
+	var list []*models.MonitorRepositoryCommitConfig
 	defer rows.Close()
 	for rows.Next() {
 		item, err := scanCronTrackerRows(rows)
@@ -70,13 +73,14 @@ func (s sqliteRepo) ListCronTask(ctx context.Context) ([]*models.CronTask, error
 	return list, nil
 }
 
-func (s sqliteRepo) SaveCronTask(ctx context.Context, payload models.CronTask) error {
+func (s sqliteRepo) SaveMonitorConfigs(ctx context.Context, payload models.MonitorRepositoryCommitConfig) error {
 	insertSQL := `
         INSERT INTO cron_tasks (
 			repo_name,
 			owner_name,
 			from_date,
-			to_date
+			to_date,
+			duration_in_hours,
 		)
         VALUES (?, ?, ?, ?)`
 
@@ -85,17 +89,18 @@ func (s sqliteRepo) SaveCronTask(ctx context.Context, payload models.CronTask) e
 		payload.OwnerName,
 		payload.FromDate,
 		payload.ToDate,
+		payload.DurationInHours,
 	)
 	return err
 }
 
-func (s sqliteRepo) GetCronTask(ctx context.Context, owner models.OwnerAndRepoName) (*models.CronTask, error) {
+func (s sqliteRepo) GetMonitorConfig(ctx context.Context, owner models.OwnerAndRepoName) (*models.MonitorRepositoryCommitConfig, error) {
 	row := s.dataStore.QueryRowContext(ctx,
 		`SELECT * from cron_tasks WHERE owner_name = ? AND repo_name = ? LIMIT 1`, owner.OwnerName, owner.RepoName)
 	return scanCronTrackerRow(row)
 }
 
-func (s sqliteRepo) DeleteCronTask(ctx context.Context, owner models.OwnerAndRepoName) error {
+func (s sqliteRepo) DeleteMonitorConfig(ctx context.Context, owner models.OwnerAndRepoName) error {
 	_, err := s.dataStore.ExecContext(ctx,
 		`DELETE from cron_tasks WHERE owner_name = ? AND repo_name = ?`, owner.OwnerName, owner.RepoName)
 

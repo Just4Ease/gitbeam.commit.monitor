@@ -6,12 +6,46 @@ import (
 	"gitbeam.commit.monitor/core"
 	"gitbeam.commit.monitor/models"
 	commits "gitbeam.commit.monitor/pb"
+	"gitbeam.commit.monitor/scheduler"
 	"github.com/sirupsen/logrus"
 )
 
 type apiService struct {
-	service *core.GitBeamService
-	logger  *logrus.Logger
+	service          *core.GitBeamService
+	schedulerService *scheduler.Scheduler
+	logger           *logrus.Logger
+}
+
+func (a apiService) StartMonitoringRepositoryCommits(ctx context.Context, params *commits.MonitorRepositoryCommitsConfigParams) (*commits.Void, error) {
+	payload := models.MonitorRepositoryCommitConfig{
+		OwnerName: params.OwnerName,
+		RepoName:  params.RepoName,
+		FromDate:  "",
+		ToDate:    "",
+	}
+
+	if params.FromDate != "" {
+		if date, _ := models.ParseDate(params.FromDate); date != nil {
+			payload.FromDate = date.String()
+		}
+	}
+
+	if params.ToDate != "" {
+		if date, _ := models.ParseDate(params.ToDate); date != nil {
+			payload.ToDate = date.String()
+		}
+	}
+
+	err := a.schedulerService.StartMirroringRepoCommits(ctx, payload)
+	return &commits.Void{}, err
+}
+
+func (a apiService) StopMonitoringRepositoryCommits(ctx context.Context, params *commits.StopMonitoringRepositoryCommitParams) (*commits.Void, error) {
+	err := a.schedulerService.StopMirroringRepoCommits(ctx, models.OwnerAndRepoName{
+		OwnerName: params.OwnerName,
+		RepoName:  params.RepoName,
+	})
+	return &commits.Void{}, err
 }
 
 func (a apiService) ListCommits(ctx context.Context, params *commits.CommitFilterParams) (*commits.ListCommitResponse, error) {
