@@ -11,14 +11,14 @@ import (
 
 // Job represents a task to be executed
 type Job struct {
-	Task   func()
+	Task   func(withDateRange bool)
 	Config *models.MonitorRepositoryCommitConfig
 }
 
 func newJob(coreService *core.GitBeamService, cfg *models.MonitorRepositoryCommitConfig) Job {
 	return Job{
 		Config: cfg,
-		Task: func() {
+		Task: func(withDateRange bool) {
 			ctx := context.Background()
 			name := models.OwnerAndRepoName{
 				OwnerName: cfg.OwnerName,
@@ -33,25 +33,27 @@ func newJob(coreService *core.GitBeamService, cfg *models.MonitorRepositoryCommi
 				Page:             0,
 			}
 
-			if cfg.FromDate != "" {
-				if date, _ := models.ParseDate(cfg.FromDate); date != nil {
-					filters.FromDate = date
+			if withDateRange {
+				if cfg.FromDate != "" {
+					if date, _ := models.ParseDate(cfg.FromDate); date != nil {
+						filters.FromDate = date
+					}
 				}
-			}
 
-			if cfg.ToDate != "" {
-				if date, _ := models.ParseDate(cfg.ToDate); date != nil {
-					filters.ToDate = date
+				if cfg.ToDate != "" {
+					if date, _ := models.ParseDate(cfg.ToDate); date != nil {
+						filters.ToDate = date
+					}
 				}
-			}
-
-			filters.ToDate, _ = models.ParseDate(time.Now().Format(time.DateOnly))
-			if lastCommit, _ := coreService.GetLastCommit(ctx, name); lastCommit != nil {
-				filters.FromDate, _ = models.ParseDate(lastCommit.Date.Format(time.DateOnly))
-				filters.ToDate, _ = models.ParseDate(time.Now().Format(time.DateOnly))
 			} else {
-				filters.FromDate = nil
-				filters.ToDate = nil
+				filters.ToDate, _ = models.ParseDate(time.Now().Format(time.DateOnly))
+				if lastCommit, _ := coreService.GetLastCommit(ctx, name); lastCommit != nil {
+					filters.FromDate, _ = models.ParseDate(lastCommit.Date.Format(time.DateOnly))
+					filters.ToDate, _ = models.ParseDate(time.Now().Format(time.DateOnly))
+				} else {
+					filters.FromDate = nil
+					filters.ToDate = nil
+				}
 			}
 
 			_ = coreService.FetchAndSaveCommits(context.Background(), filters)
@@ -115,11 +117,10 @@ func (s *jobTracker) updateJob(cfg models.MonitorRepositoryCommitConfig) {
 func (s *jobTracker) startJob(job *Job, stopChan chan bool) {
 	ticker := time.NewTicker(60 * time.Minute * time.Duration(job.Config.DurationInHours))
 	defer ticker.Stop()
-	go job.Task() // Always start the job instantly. Then the following code below schedules it to be executed in the next interval.
 	for {
 		select {
 		case <-ticker.C:
-			job.Task()
+			job.Task(false)
 		case <-stopChan:
 			fmt.Printf("Stopping job %s\n", job.ID)
 			return

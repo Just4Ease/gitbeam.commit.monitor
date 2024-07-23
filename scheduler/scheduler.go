@@ -9,6 +9,7 @@ import (
 	"gitbeam.commit.monitor/models"
 	"gitbeam.commit.monitor/repository"
 	"github.com/sirupsen/logrus"
+	"sync"
 )
 
 var (
@@ -45,7 +46,8 @@ func (s *Scheduler) StartMirroringRepoCommits(ctx context.Context, payload model
 		return ErrFailedToStartMonitoringRepoCommits
 	}
 
-	s.jobTracker.addJob(newJob(s.coreService, &payload))
+	job := newJob(s.coreService, &payload)
+	s.jobTracker.addJob(job)
 
 	eventStore := s.coreService.GetEventStore()
 
@@ -90,7 +92,16 @@ func (s *Scheduler) loadExistingConfig() {
 		return
 	}
 
+	wg := sync.WaitGroup{}
 	for _, config := range list {
-		s.jobTracker.addJob(newJob(s.coreService, config))
+		wg.Add(1)
+		job := newJob(s.coreService, config)
+		go func(job *Job) {
+			defer wg.Done()
+			job.Task(false)
+		}(&job)
+		s.jobTracker.addJob(job)
 	}
+
+	wg.Wait()
 }
