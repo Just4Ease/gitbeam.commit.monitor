@@ -67,19 +67,11 @@ func (g GitBeamService) ListCommits(ctx context.Context, filters models.CommitFi
 
 	var commits []*models.Commit
 	var err error
-	hasAttemptedRetry := false
 
-retry:
 	commits, err = g.dataStore.ListCommits(ctx, filters)
 	if err != nil {
 		useLogger.WithError(err).Errorln("failed to list commits from database")
 		return make([]*models.Commit, 0), nil
-	}
-
-	if len(commits) == 0 && !hasAttemptedRetry {
-		_ = g.FetchAndSaveCommits(ctx, filters)
-		hasAttemptedRetry = true
-		goto retry
 	}
 
 	return commits, err
