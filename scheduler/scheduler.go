@@ -41,6 +41,21 @@ func NewScheduler(coreService *core.GitBeamService, dataStore repository.CronSer
 func (s *Scheduler) StartMirroringRepoCommits(ctx context.Context, payload models.MonitorRepositoryCommitConfig) error {
 	useLogger := s.logger.WithContext(ctx).WithField("methodName", "StartMirroringRepoCommits")
 
+	name := models.OwnerAndRepoName{
+		OwnerName: payload.OwnerName,
+		RepoName:  payload.RepoName,
+	}
+
+	existingConfig, _ := s.dataStore.GetMonitorConfig(ctx, name)
+	if existingConfig != nil {
+		err := s.dataStore.DeleteMonitorConfig(ctx, name)
+		if err != nil {
+			useLogger.WithError(err).Error("Failed to delete cron task from cronStore.")
+			return ErrFailedToStopMonitoringRepoCommits
+		}
+		s.jobTracker.removeJob(existingConfig.ID())
+	}
+
 	if err := s.dataStore.SaveMonitorConfigs(ctx, payload); err != nil {
 		useLogger.WithError(err).Error("Failed to save cron task in cronStore.")
 		return ErrFailedToStartMonitoringRepoCommits

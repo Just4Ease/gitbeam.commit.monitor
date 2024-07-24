@@ -23,5 +23,5 @@ type CommitFilters struct {
 
 type TopCommitAuthor struct {
 	Author      string `json:"author"`
-	CommitCount int    `json:"commitCount"`
+	CommitCount int    `json:"commitsCount"`
 }
