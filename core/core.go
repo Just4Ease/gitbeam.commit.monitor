@@ -171,7 +171,7 @@ run:
 		commit := &models.Commit{
 			SHA:             gitCommit.GetSHA(),
 			Message:         c.GetMessage(),
-			Author:          gitCommit.GetCommitter().GetLogin(),
+			Author:          c.GetAuthor().GetName(),
 			Date:            c.Committer.GetDate().Time,
 			URL:             gitCommit.GetHTMLURL(),
 			OwnerName:       filters.OwnerName,

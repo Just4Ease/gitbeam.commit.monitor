@@ -44,8 +44,8 @@ func main() {
 	// To handle event-based background activities. ( in a real world system, this would be apache-pulsar, kafka, nats.io or rabbitmq )
 	go events.NewEventHandler(eventStore, logger, coreService).Listen()
 
-	//Using SQLite as the mini persistent storage.
-	//( in a real world system, this would be any production level or vendor managed db )
+	////Using SQLite as the mini persistent storage.
+	////( in a real world system, this would be any production level or vendor managed db )
 	if cronStore, err = sqlite.NewSqliteCronStore("cron_store.db"); err != nil {
 		logger.WithError(err).Fatal("failed to initialize sqlite database repository for cron store.")
 	}
